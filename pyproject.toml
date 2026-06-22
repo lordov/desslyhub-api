@@ -24,8 +24,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Lordov/desslyhub-api"
-Repository = "https://github.com/Lordov/desslyhub-api"
+Homepage = "https://github.com/lordov/desslyhub"
+Repository = "https://github.com/lordov/desslyhub"
 Documentation = "https://desslyhub.com/readme/"
 
 [dependency-groups]

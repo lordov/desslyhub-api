@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Lordov/desslyhub-api/main/assets/logo.svg" alt="DesslyHub API" width="320">
+  <img src="https://raw.githubusercontent.com/lordov/desslyhub/main/assets/logo.svg" alt="DesslyHub API" width="320">
 </p>
 
 <h1 align="center">desslyhub-api</h1>
