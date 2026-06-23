@@ -5,8 +5,8 @@
 <h1 align="center">desslyhub-api</h1>
 
 <p align="center">
-  Асинхронный Python-клиент для <a href="https://desslyhub.com/readme/">DesslyHub API</a>:<br>
-  Steam, мобильные игры, ваучеры, eSIM, баланс мерчанта, заказы и курсы валют.
+  Async Python client for the <a href="https://desslyhub.com/readme/">DesslyHub API</a>:<br>
+  Steam, mobile games, vouchers, eSIM, merchant balance, orders and currency exchange rates.
 </p>
 
 <p align="center">
@@ -17,59 +17,63 @@
   <img src="https://img.shields.io/badge/async-aiohttp%20%2B%20orjson-FF69B4" alt="aiohttp + orjson">
 </p>
 
+<p align="center">
+  <b>English</b> · <a href="https://github.com/lordov/desslyhub/blob/main/README.ru.md">Русский</a>
+</p>
+
 ---
 
-Клиент построен на `aiohttp` + `orjson`, ответы валидируются через `pydantic`, денежные значения представлены типом `Decimal`. Все эндпоинты доступны под базовым URL `https://desslyhub.com` с префиксом `/api/v1/`.
+Built on `aiohttp` + `orjson`, responses are validated with `pydantic`, and monetary values are represented as `Decimal`. All endpoints live under the base URL `https://desslyhub.com` with the `/api/v1/` prefix.
 
-## Содержание
+## Contents
 
-- [Возможности](#возможности)
-- [Установка](#установка)
-- [Быстрый старт](#быстрый-старт)
-- [Аутентификация](#аутентификация)
-- [Использование](#использование)
-- [Заказы (Orders)](#заказы-orders)
-- [Денежные значения и обработка ошибок](#денежные-значения-и-обработка-ошибок)
-- [Разработка](#разработка)
-- [Лицензия](#лицензия)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Authentication](#authentication)
+- [Usage](#usage)
+- [Orders](#orders)
+- [Money values and error handling](#money-values-and-error-handling)
+- [Development](#development)
+- [License](#license)
 
-## Возможности
+## Features
 
-| Ресурс | Назначение |
+| Resource | Purpose |
 | --- | --- |
-| `client.steam` | Каталог игр для подарка, издания игры и проверка логина для пополнения. |
-| `client.mobile` | Каталог мобильных игр и детали конкретной игры. |
-| `client.vouchers` | Каталог товаров-ваучеров и товар по идентификатору. |
-| `client.esim` | Каталог вариантов eSIM с курсорной пагинацией и детали варианта. |
-| `client.merchant` | Текущий баланс мерчанта. |
-| `client.exchange` | Курсы валют к доллару США для пополнения Steam. |
-| `client.orders` | Единая точка создания всех покупок (пополнения, подарки, ваучеры, eSIM), а также список и детали заказов. |
+| `client.steam` | Catalog of gift games, game editions and login check for top-ups. |
+| `client.mobile` | Catalog of mobile games and details of a specific game. |
+| `client.vouchers` | Catalog of voucher products and a product by id. |
+| `client.esim` | Catalog of eSIM variants with cursor pagination and variant details. |
+| `client.merchant` | Current merchant balance. |
+| `client.exchange` | Currency rates against USD for Steam top-ups. |
+| `client.orders` | Single entry point for creating all purchases (top-ups, gifts, vouchers, eSIM), plus listing and order details. |
 
-> Создание любых покупок выполняется через ресурс `orders` (единый эндпоинт `POST /api/v1/orders`). Прежние методы `gift` / `top_up` / `refill` / `buy` и ресурс `merchants` с эндпоинтами `/transactions` удалены — историю и статусы покупок заменили заказы.
+> All purchases are created through the `orders` resource (single endpoint `POST /api/v1/orders`). The old `gift` / `top_up` / `refill` / `buy` methods and the `merchants` resource with `/transactions` endpoints were removed — order history and statuses are now handled by orders.
 
-## Установка
+## Installation
 
-**Требования:** Python 3.12+ и [uv](https://docs.astral.sh/uv/).
+**Requirements:** Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
-### Для конечных пользователей
+### For end users
 
 ```bash
 uv add desslyhub-api
-# или
+# or
 pip install desslyhub-api
 ```
 
-Импорт пакета: `import desslyhub_api`.
+Import the package: `import desslyhub_api`.
 
-### Для локальной разработки
+### For local development
 
-Клонируйте репозиторий и установите все группы зависимостей (включая dev-инструменты: pytest, black, isort, mypy):
+Clone the repository and install all dependency groups (including the dev tools: pytest, black, isort, mypy):
 
 ```bash
 uv sync --all-groups
 ```
 
-## Быстрый старт
+## Quick start
 
 ```python
 import asyncio
@@ -78,7 +82,7 @@ from desslyhub_api import DesslyHubClient
 
 
 async def main() -> None:
-    async with DesslyHubClient("ВАШ_API_КЛЮЧ", "ВАШ_SECRET") as client:
+    async with DesslyHubClient("YOUR_API_KEY", "YOUR_SECRET") as client:
         balance = await client.merchant.get_balance()
         print(balance.balance)  # Decimal
 
@@ -86,61 +90,61 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-Клиент — асинхронный контекстный менеджер: внутри `async with` открывается постоянная HTTP-сессия, которая автоматически закрывается на выходе.
+The client is an async context manager: inside `async with` it opens a persistent HTTP session that is closed automatically on exit.
 
-## Аутентификация
+## Authentication
 
-Каждый запрос подписывается по схеме HMAC-SHA256: `signature = HMAC_SHA256(secret, api_key + timestamp + body)`. Клиент сам добавляет к каждому запросу заголовки `X-Api-Key`, `X-Timestamp` (Unix-время в секундах) и `X-Signature`. Поэтому нужны **два** значения — `api_key` и `secret`. Базовый URL по умолчанию — `https://desslyhub.com`.
+Every request is signed with HMAC-SHA256: `signature = HMAC_SHA256(secret, api_key + timestamp + body)`. The client adds the `X-Api-Key`, `X-Timestamp` (Unix time in seconds) and `X-Signature` headers to every request. So you need **two** values — `api_key` and `secret`. The default base URL is `https://desslyhub.com`.
 
 ```python
 from desslyhub_api import DesslyHubClient
 
-# Минимальный вариант
-client = DesslyHubClient("ВАШ_API_КЛЮЧ", "ВАШ_SECRET")
+# Minimal
+client = DesslyHubClient("YOUR_API_KEY", "YOUR_SECRET")
 
-# С переопределением base_url и таймаута
+# Overriding base_url and timeout
 client = DesslyHubClient(
-    "ВАШ_API_КЛЮЧ",
-    "ВАШ_SECRET",
+    "YOUR_API_KEY",
+    "YOUR_SECRET",
     base_url="https://desslyhub.com",
     timeout_seconds=30.0,
 )
 ```
 
-## Использование
+## Usage
 
-Все методы асинхронные и вызываются внутри `async with DesslyHubClient(api_key, secret) as client:`.
+All methods are async and called inside `async with DesslyHubClient(api_key, secret) as client:`.
 
-### Баланс мерчанта
+### Merchant balance
 
 ```python
 balance = await client.merchant.get_balance()
-print(balance.balance)            # Decimal — общий баланс
-print(balance.available_balance)  # Decimal — доступно для трат
-print(balance.overdraft)          # Decimal — лимит овердрафта
-print(balance.reserve)            # Decimal — зарезервированные средства
+print(balance.balance)            # Decimal — total balance
+print(balance.available_balance)  # Decimal — available to spend
+print(balance.overdraft)          # Decimal — overdraft limit
+print(balance.reserve)            # Decimal — reserved funds
 ```
 
-`get_balance()` возвращает модель `Balance` с полями `balance`, `available_balance`, `overdraft`, `reserve` — все значения типа `Decimal`.
+`get_balance()` returns a `Balance` model with fields `balance`, `available_balance`, `overdraft`, `reserve` — all of type `Decimal`.
 
-### Steam: каталог игр, издания и проверка логина
+### Steam: games catalog, editions and login check
 
 ```python
 games = await client.steam.get_games()
 for game in games:
     print(game)
 
-# Издания конкретной игры по её app_id
+# Editions of a specific game by its app_id
 editions = await client.steam.get_editions(app_id=730)
 for edition in editions:
     print(edition)
 
-# Можно ли пополнить аккаунт Steam с указанным логином
+# Whether a Steam account with the given login can be topped up
 can_refill = await client.steam.check_login(username="steam_user")
 print(can_refill)  # bool
 ```
 
-### Mobile: каталог и детали игры
+### Mobile: catalog and game details
 
 ```python
 games = await client.mobile.get_games()
@@ -151,7 +155,7 @@ details = await client.mobile.get_game(game_id=42)
 print(details)
 ```
 
-### Vouchers: каталог
+### Vouchers: catalog
 
 ```python
 products = await client.vouchers.get_products()
@@ -162,14 +166,14 @@ product = await client.vouchers.get_product(product_id=10)
 print(product)
 ```
 
-### eSIM: каталог
+### eSIM: catalog
 
 ```python
-page = await client.esim.get_products()  # cursor=None — первая страница
+page = await client.esim.get_products()  # cursor=None — first page
 for variant in page.variants:
     print(variant)
 
-# Следующая страница по курсору
+# Next page by cursor
 if page.next_cursor:
     next_page = await client.esim.get_products(cursor=page.next_cursor)
     print(next_page.variants)
@@ -178,7 +182,7 @@ details = await client.esim.get_product(variant_id="variant-123")
 print(details)
 ```
 
-### Exchange: курсы валют
+### Exchange: currency rates
 
 ```python
 from desslyhub_api import Currency
@@ -186,63 +190,63 @@ from desslyhub_api import Currency
 all_rates = await client.exchange.get_all_rates()
 print(all_rates.rates)  # dict[int, float]
 
-# Курс по конкретной валюте (enum Currency или числовой код)
+# Rate for a specific currency (Currency enum or numeric code)
 rate = await client.exchange.get_rate(Currency.RUB)
 print(rate.rate)
 ```
 
-## Заказы (Orders)
+## Orders
 
-Все покупки создаются через ресурс `client.orders`. Каждый метод `create_*` возвращает `CreateOrderResponse` с полями `order_id` (int) и `status` (str). Типичный сценарий:
+All purchases are created through the `client.orders` resource. Each `create_*` method returns `CreateOrderResponse` with fields `order_id` (int) and `status` (str). Typical flow:
 
-1. Создать заказ методом `create_*` — в ответе придут `order_id` и `status`.
-2. Опрашивать заказ через `client.orders.get(order_id)`, отслеживая `order_status` и `service_result` (результат становится доступен после успешного выполнения).
+1. Create an order with a `create_*` method — the response contains `order_id` and `status`.
+2. Poll the order via `client.orders.get(order_id)`, tracking `order_status` and `service_result` (the result becomes available after successful completion).
 
-У всех методов `create_*` есть общие необязательные параметры (только по ключу):
+All `create_*` methods share common keyword-only optional parameters:
 
-- `payment_method: PaymentMethod` — способ оплаты, по умолчанию `PaymentMethod.BALANCE` (списание с баланса мерчанта). Для оплаты по QR-ссылке — `PaymentMethod.PAYLINK_QR`.
-- `payment_params: PaylinkQRPaymentParams | None` — параметры оплаты по QR (нужны для `PAYLINK_QR`).
-- `reference: str | None` — ваш внешний идентификатор заказа.
+- `payment_method: PaymentMethod` — payment method, defaults to `PaymentMethod.BALANCE` (charge the merchant balance). For QR-link payment use `PaymentMethod.PAYLINK_QR`.
+- `payment_params: PaylinkQRPaymentParams | None` — QR payment parameters (required for `PAYLINK_QR`).
+- `reference: str | None` — your external order id.
 
-### Оплата с баланса (по умолчанию)
+### Payment from balance (default)
 
 ```python
-# Пополнение Steam
+# Steam top-up
 order = await client.orders.create_steam_refill(
     username="steam_user",
-    amount=10.0,                 # сумма в USD
-    reference="my-order-id",     # необязательно
+    amount=10.0,                 # amount in USD
+    reference="my-order-id",     # optional
 )
 print(order.order_id, order.status)
 
-# Подарок игры Steam
+# Steam game gift
 order = await client.orders.create_steam_gift(
     invite_url="https://steamcommunity.com/p/...",
     package_id="12345",
     region="RU",
 )
 
-# Покупка ваучеров
+# Voucher purchase
 order = await client.orders.create_voucher(
     root_id=10,
     variant_id=2,
     quantity=1,
 )
 
-# Пополнение мобильной игры
+# Mobile game top-up
 order = await client.orders.create_mobile_refill(
     position=3,
     fields={"player_id": "123456"},
 )
 
-# Покупка eSIM
+# eSIM purchase
 order = await client.orders.create_esim(
     product_id="product-123",
     variant_id="variant-456",
 )
 ```
 
-### Оплата по QR-ссылке (PAYLINK_QR)
+### Payment via QR link (PAYLINK_QR)
 
 ```python
 from desslyhub_api import PaymentMethod, PaylinkQRPaymentParams
@@ -261,33 +265,33 @@ order = await client.orders.create_steam_refill(
 print(order.order_id, order.status)
 ```
 
-### Список и детали заказов
+### Listing and order details
 
 ```python
-# Страница списка с пагинацией limit/offset
+# List page with limit/offset pagination
 page = await client.orders.list(limit=20, offset=0)
 print(page.total, page.limit, page.offset)
 for item in page.items:
     print(item.order_id, item.order_status)
 
-# Подробности конкретного заказа
+# Details of a specific order
 details = await client.orders.get(order_id=12345)
-print(details.order_status)    # str — статус заказа
-print(details.service_type)    # str — тип сервиса
-print(details.commission)      # Decimal — комиссия
-print(details.final_amount)    # Decimal — итоговая сумма
-print(details.service_result)  # результат выполнения (после успеха)
+print(details.order_status)    # str — order status
+print(details.service_type)    # str — service type
+print(details.commission)      # Decimal — commission
+print(details.final_amount)    # Decimal — final amount
+print(details.service_result)  # execution result (after success)
 ```
 
-`list()` возвращает `OrderList` с полями `items`, `total`, `limit`, `offset`. `get()` возвращает `OrderDetails` с полями `order_id`, `order_status`, `service_type`, `payment_method`, `commission` и `final_amount` (оба `Decimal`), временными метками и `service_result`.
+`list()` returns `OrderList` with fields `items`, `total`, `limit`, `offset`. `get()` returns `OrderDetails` with fields `order_id`, `order_status`, `service_type`, `payment_method`, `commission` and `final_amount` (both `Decimal`), timestamps and `service_result`.
 
-## Денежные значения и обработка ошибок
+## Money values and error handling
 
-- Денежные значения (например поля `Balance`, а также `commission` и `final_amount` в `OrderDetails`) представлены типом `Decimal`, чтобы избежать ошибок округления.
-- При HTTP-статусе ответа `>= 400` клиент бросает `DesslyHubAPIError`. Тело ошибки разбирается в формате RFC 7807 (`ErrorModel`). У исключения есть атрибуты `error_code` (int), `message` (str) и `http_status` (int | None).
-- Сетевые проблемы поднимают `DesslyHubConnectionError`.
-- Некорректный/нечитаемый ответ API поднимает `DesslyHubResponseError`.
-- Все исключения наследуются от базового `DesslyHubError`.
+- Monetary values (e.g. `Balance` fields, as well as `commission` and `final_amount` in `OrderDetails`) are represented as `Decimal` to avoid rounding errors.
+- On a response HTTP status `>= 400` the client raises `DesslyHubAPIError`. The error body is parsed as RFC 7807 (`ErrorModel`). The exception exposes `error_code` (int), `message` (str) and `http_status` (int | None) attributes.
+- Network problems raise `DesslyHubConnectionError`.
+- An invalid/unreadable API response raises `DesslyHubResponseError`.
+- All exceptions inherit from the base `DesslyHubError`.
 
 ```python
 from desslyhub_api import (
@@ -300,29 +304,29 @@ async with DesslyHubClient(api_key, secret) as client:
     try:
         balance = await client.merchant.get_balance()
     except DesslyHubAPIError as error:
-        print("Ошибка API:", error.error_code, error.message, error.http_status)
+        print("API error:", error.error_code, error.message, error.http_status)
     except DesslyHubConnectionError as error:
-        print("Ошибка соединения:", error)
+        print("Connection error:", error)
     except DesslyHubResponseError as error:
-        print("Некорректный ответ:", error)
+        print("Invalid response:", error)
 ```
 
-## Разработка
+## Development
 
-Установка окружения со всеми dev-зависимостями (pytest, black, isort, mypy):
+Set up the environment with all dev dependencies (pytest, black, isort, mypy):
 
 ```bash
 uv sync --all-groups
 ```
 
-Полезные команды:
+Useful commands:
 
 ```bash
-uv run pytest -q                   # тесты
-uv run isort . && uv run black .   # форматирование
-uv run mypy desslyhub_api          # проверка типов
+uv run pytest -q                   # tests
+uv run isort . && uv run black .   # formatting
+uv run mypy desslyhub_api          # type checking
 ```
 
-## Лицензия
+## License
 
 [MIT](LICENSE).

@@ -1,6 +1,6 @@
 [project]
 name = "desslyhub-api"
-version = "0.1.0"
+version = "0.1.1"
 description = "Асинхронный клиент для DesslyHub API (Steam, мобильные игры, ваучеры, eSIM, заказы, баланс, курсы валют)"
 readme = "README.md"
 requires-python = ">=3.12"
